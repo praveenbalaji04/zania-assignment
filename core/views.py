@@ -86,4 +86,5 @@ class OpenAIAPIView(APIView):
         }
         """
 
+        # :TODO: add serializer for response.
         return Response({"data": response})
