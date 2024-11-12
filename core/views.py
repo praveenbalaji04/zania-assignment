@@ -75,4 +75,15 @@ class OpenAIAPIView(APIView):
                 content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
+        """
+        sample API response
+        {
+            "data": {
+                "What is the capital of France?": "The capital of France is Paris.",
+                "What is the capital of Germany?": "The capital of Germany is Berlin.",
+                "What is the capital of Spain": "The capital of Spain is Madrid."
+            }
+        }
+        """
+
         return Response({"data": response})
