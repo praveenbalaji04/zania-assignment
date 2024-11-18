@@ -6,7 +6,9 @@ from django.http import FileResponse
 from rest_framework.parsers import MultiPartParser
 from rest_framework.exceptions import ValidationError
 
+from rest_framework import status
 from core.helpers import JsonHandler, PdfHandler
+from core import pizza_data, pizza_v3
 
 from pypdf import PdfReader
 from openpyxl import Workbook
@@ -88,3 +90,97 @@ class OpenAIAPIView(APIView):
 
         # :TODO: add serializer for response.
         return Response({"data": response})
+
+
+class CreateOrder(APIView):
+
+    def create_new_order(self, data):
+        from random import randint
+        """
+        order_details
+        
+        """
+        # TODO this should be a model
+        order = {
+            "id": randint(1, 100000),
+            "order_detail": data.get("order_detail"),
+            "price": data.get("total_price")
+        }
+        # order = Order.objects.create(
+        #     order_detail=data.get("order_detail"),
+        #     prize=data.get("price")
+        # )
+        return order
+
+    def post(self, request):
+        """
+        payload: [
+            {
+                'id': 1,
+                'quantity': 2 
+            },
+            {
+                'id': 3,
+                'quantity': 5
+            }
+        ]
+        """
+
+        """Place an order for pizzas using /order endpoint and return total final price and an order id"""
+        """
+        order_id : int
+        order details : input from user
+        created_at : 
+        waiting_time:
+        prize: int
+        """
+
+        missing_pizzas = []
+        total_price = 0
+        response = {}
+        valid_order_detail = {}
+        for value in request.data:
+            required_id = value.get("id")
+            pizza_detail = pizza_v3.get(str(required_id))
+
+            if not pizza_detail:
+                missing_pizzas.append(str(required_id))
+                continue
+
+            price = pizza_detail.get("price") # float value
+            total_price += price * value.get("quantity")
+            valid_order_detail[value.get("id")] = {"quantity": value.get("quantity"), "price": price * value.get("quantity")}
+
+        data_payload = {"order_detail": valid_order_detail, "total_price": total_price}
+        order_detail = self.create_new_order(data_payload)
+
+        # TODO: add serializer, add detail order information ( i.e pizza detail and order information and pricing of each)
+        response["order_id"] = order_detail.get("id")
+        response["total_price"] = order_detail.get("price")
+        if missing_pizzas:
+            response["error"] = {"missing pizza ids": missing_pizzas}
+
+        return Response({"data": response})
+
+
+class GetPizzaMenu(APIView):
+
+    def get(self, request):
+        name = request.query_params.get("name")
+        if not name:
+            raise ValidationError({"error": "invalid name"})
+        """
+        response: {
+            "id": 1,
+            "name": "Margherita",
+            "size": "Medium",
+            "price": 8.99,
+            "toppings": ["tomato sauce", "mozzarella", "basil"]
+        }
+        """
+
+        for pizza_dict in pizza_data:
+            if pizza_dict.get("name").lower() == name.lower():
+                return Response({"data": pizza_dict})
+
+        return Response({"error": "no pizza found"}, status=status.HTTP_400_BAD_REQUEST)
